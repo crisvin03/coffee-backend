@@ -26,7 +26,7 @@ export default function LoginScreen(): JSX.Element {
     }
 
     try {
-      const response = await fetch('http://YOUR-IP-ADDRESS:3000/login', {
+      const response = await fetch('https://coffee-backend-s1ed.onrender.com/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -67,6 +67,7 @@ export default function LoginScreen(): JSX.Element {
             value={email}
             onChangeText={setEmail}
           />
+
           <TextInput
             placeholder="Password"
             placeholderTextColor="#ccc"
@@ -76,6 +77,15 @@ export default function LoginScreen(): JSX.Element {
             onChangeText={setPassword}
           />
 
+          {/* 👉 Forgot Password link */}
+          <TouchableOpacity
+            style={styles.forgotPasswordButton}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          {/* 👉 Register link */}
           <TouchableOpacity
             style={styles.registerButton}
             onPress={() => navigation.navigate('Register')}
@@ -119,6 +129,15 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 15,
     color: '#fff',
+  },
+  forgotPasswordButton: {
+    alignItems: 'flex-end',
+    marginBottom: 10,
+  },
+  forgotPasswordText: {
+    color: '#E3A987',
+    fontSize: 14,
+    fontWeight: '500',
   },
   registerButton: {
     alignItems: 'center',

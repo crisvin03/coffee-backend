@@ -53,7 +53,56 @@ app.post('/login', (req, res) => {
   });
 });
 
-// ✅ Start the server
+/**
+ * REQUEST PASSWORD RESET
+ */
+app.post('/request-reset', (req, res) => {
+  const { email } = req.body;
+
+  if (!email) return res.status(400).json({ message: 'Email is required.' });
+
+  const token = crypto.randomBytes(20).toString('hex');
+
+  db.run(
+    `UPDATE users SET resetToken = ? WHERE email = ?`,
+    [token, email],
+    function (err) {
+      if (err) return res.status(500).json({ message: 'Server error.' });
+      if (this.changes === 0) return res.status(404).json({ message: 'Email not found.' });
+
+      // In real implementation, send this via email
+      res.status(200).json({ message: 'Reset token generated.', token });
+    }
+  );
+});
+
+/**
+ * RESET PASSWORD
+ */
+app.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ message: 'Token and new password are required.' });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  db.run(
+    `UPDATE users SET password = ?, resetToken = NULL WHERE resetToken = ?`,
+    [hashed, token],
+    function (err) {
+      if (err) return res.status(500).json({ message: 'Server error.' });
+      if (this.changes === 0) return res.status(400).json({ message: 'Invalid or expired token.' });
+
+      res.status(200).json({ message: 'Password reset successful.' });
+    }
+  );
+});
+
+/**
+ * START SERVER
+ */
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

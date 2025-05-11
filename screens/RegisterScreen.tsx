@@ -52,7 +52,7 @@ export default function RegisterScreen() {
   // 📡 Backend API call
   const registerUser = async () => {
     try {
-      const response = await fetch('http://10.0.15.191:3000/register', {
+      const response = await fetch('https://coffee-backend-s1ed.onrender.com/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
