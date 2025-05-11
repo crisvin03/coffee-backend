@@ -4,7 +4,7 @@ const cors = require('cors');
 const db = require('./db');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // ✅ Works on Render or local
 
 app.use(cors());
 app.use(express.json());
@@ -35,7 +35,7 @@ app.post('/register', async (req, res) => {
   );
 });
 
-// ✅ LOGIN route (⬅️ ADD THIS RIGHT AFTER /register)
+// ✅ LOGIN route
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
@@ -55,5 +55,5 @@ app.post('/login', (req, res) => {
 
 // ✅ Start the server
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
