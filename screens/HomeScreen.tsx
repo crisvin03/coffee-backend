@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,15 @@ import {
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Feather, Entypo } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
+import { useFavorites } from '../context/FavoritesContext';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../App'; // adjust if needed
 
 const categories = ['All', 'Hot', 'Iced', 'Pastries'];
+
 const items = new Array(8).fill(null).map((_, i) => ({
   id: i,
   title: `Item ${i + 1}`,
@@ -20,84 +26,120 @@ const items = new Array(8).fill(null).map((_, i) => ({
 }));
 
 export default function HomeScreen() {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const renderItem = ({ item }: any) => (
-    <View style={styles.card}>
-      <View style={styles.cardBadge}>
-        <Text style={styles.cardBadgeText}>★</Text>
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardDesc}>{item.desc}</Text>
-        <TouchableOpacity style={styles.cardButton}>
-          <Feather name="info" color="#fff" size={16} />
+  const [searchText, setSearchText] = useState('');
+  const [filteredItems, setFilteredItems] = useState(items);
+
+  const showToast = (message: string) => {
+    Toast.show({
+      type: 'success',
+      text1: message,
+      position: 'bottom',
+      visibilityTime: 1500,
+    });
+  };
+
+  useEffect(() => {
+    if (searchText.trim() === '') {
+      setFilteredItems(items);
+    } else {
+      const filtered = items.filter((item) =>
+        item.title.toLowerCase().includes(searchText.toLowerCase())
+      );
+      setFilteredItems(filtered);
+    }
+  }, [searchText]);
+
+  const renderItem = ({ item }: any) => {
+    const favorite = isFavorite(item.id);
+
+    const toggleFavorite = () => {
+      if (favorite) {
+        removeFavorite(item.id);
+        showToast('Removed from Favorites');
+      } else {
+        addFavorite(item);
+        showToast('Added to Favorites');
+      }
+    };
+
+    return (
+      <TouchableOpacity onPress={() => navigation.navigate('Detail', { item })} style={styles.card}>
+        <View style={styles.cardBadge}>
+          <Text style={styles.cardBadgeText}>★</Text>
+        </View>
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardDesc}>{item.desc}</Text>
+        </View>
+        <TouchableOpacity style={styles.cardButton} onPress={toggleFavorite}>
+          <Feather name="heart" size={18} color={favorite ? '#FF4D4D' : '#ffffff'} />
         </TouchableOpacity>
-      </View>
-    </View>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
-      {/* Top Gradient Header */}
       <LinearGradient colors={['#1c1c1e', '#111']} style={styles.topSection}>
         <View style={styles.searchRow}>
-          <TextInput
-            placeholder="Search"
-            placeholderTextColor="#aaa"
-            style={styles.searchInput}
-          />
+          <View style={styles.searchInputWrapper}>
+            <TextInput
+              placeholder="Search"
+              placeholderTextColor="#aaa"
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+            {searchText.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchText('')}>
+                <Entypo name="circle-with-cross" size={18} color="#aaa" />
+              </TouchableOpacity>
+            )}
+          </View>
+
           <TouchableOpacity style={styles.filterButton}>
             <Feather name="sliders" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Featured Card */}
-        <View style={styles.featuredCard}>
-          <Text style={styles.featuredTitle}>☕ Recommended</Text>
-          <View style={styles.featuredLines}>
-            <View style={styles.featuredLine} />
-            <View style={[styles.featuredLine, { width: '60%' }]} />
-          </View>
+      {filteredItems.length === 0 ? (
+        <View style={styles.noResultContainer}>
+          <Text style={styles.noResultText}>No search results found.</Text>
         </View>
-
-        {/* Category Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabRow}>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => setSelectedCategory(cat)}
-              style={[
-                styles.tab,
-                selectedCategory === cat && styles.tabActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedCategory === cat && styles.tabTextActive,
-                ]}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Grid Cards */}
+      ) : (
         <FlatList
-          data={items}
+          data={filteredItems}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={styles.content}
+          ListHeaderComponent={
+            <>
+              <View style={styles.featuredCard}>
+                <Text style={styles.featuredTitle}>☕ Recommended</Text>
+                <View style={styles.featuredLines}>
+                  <View style={styles.featuredLine} />
+                  <View style={[styles.featuredLine, { width: '60%' }]} />
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabRow}>
+                {categories.map((cat) => (
+                  <TouchableOpacity key={cat} style={styles.tab}>
+                    <Text style={styles.tabText}>{cat}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          }
         />
-      </ScrollView>
+      )}
+      <Toast />
     </View>
   );
 }
@@ -113,22 +155,31 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  searchInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#333',
-    padding: 12,
-    borderRadius: 12,
     color: '#fff',
+    fontSize: 14,
   },
   filterButton: {
-    marginLeft: 10,
     backgroundColor: '#C77B4D',
     padding: 12,
     borderRadius: 12,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 90,
   },
   featuredCard: {
     backgroundColor: '#fff',
@@ -155,6 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     borderRadius: 6,
     width: '80%',
+    marginBottom: 6,
   },
   tabRow: {
     flexDirection: 'row',
@@ -167,16 +219,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 10,
   },
-  tabActive: {
-    backgroundColor: '#C77B4D',
-  },
   tabText: {
     fontSize: 14,
     color: '#333',
-  },
-  tabTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
   card: {
     backgroundColor: '#fff',
@@ -185,15 +230,18 @@ const styles = StyleSheet.create({
     width: '48%',
     marginBottom: 16,
     position: 'relative',
+    height: 160,
+    justifyContent: 'space-between',
   },
   cardBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 10,
+    right: 10,
     backgroundColor: '#C77B4D',
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    zIndex: 1,
   },
   cardBadgeText: {
     color: '#fff',
@@ -201,7 +249,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cardContent: {
-    marginTop: 20,
+    flex: 1,
+    justifyContent: 'center',
   },
   cardTitle: {
     fontWeight: '600',
@@ -211,12 +260,22 @@ const styles = StyleSheet.create({
   cardDesc: {
     fontSize: 13,
     color: '#666',
-    marginBottom: 8,
   },
   cardButton: {
     backgroundColor: '#C77B4D',
     alignSelf: 'flex-end',
-    padding: 8,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
+  },
+  noResultContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  noResultText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
   },
 });

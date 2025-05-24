@@ -36,7 +36,7 @@ export default function LoginScreen(): JSX.Element {
 
       if (response.ok) {
         Alert.alert('Success', `Welcome back, ${data.user.fullName}!`);
-        navigation.navigate('Home'); // ✅ After successful login
+        navigation.navigate('Main'); // ✅ After successful login
         // Optionally navigate to a Home screen here
       } else {
         Alert.alert('Login Failed', data.message || 'Invalid credentials.');
